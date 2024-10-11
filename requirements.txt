@@ -1,3 +1,4 @@
 flask
+gradio
 g4f
 flask-cors
