@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SONE AI Assistant</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background-color: #2a2a2a;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3), 0 0 40px rgba(0, 255, 255, 0.2);
+        }
+        .chat-header {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            padding: 20px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin: 0;
+            background: linear-gradient(45deg, #ffffff, #e0e0e0);
+            -webkit-background-clip: text;
+            background-clip: transparent;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+        .user-message {
+            align-self: flex-end;
+        }
+        .bot-message {
+            align-self: flex-start;
+        }
+        .message-content {
+            padding: 12px 18px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            line-height: 1.4;
+            position: relative;
+        }
+        .user-message .message-content {
+            background-color: #ff00ff;
+            color: #ffffff;
+        }
+        .bot-message .message-content {
+            background-color: #00ffff;
+            color: #1a1a1a;
+        }
+        .message-content::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            width: 20px;
+            height: 20px;
+            background-color: inherit;
+            clip-path: polygon(0 0, 100% 0, 0 100%);
+        }
+        .user-message .message-content::before {
+            right: -10px;
+            transform: rotate(-45deg);
+        }
+        .bot-message .message-content::before {
+            left: -10px;
+            transform: rotate(45deg);
+        }
+        .chat-input {
+            display: flex;
+            padding: 20px;
+            background-color: #333333;
+        }
+        #user-input {
+            flex-grow: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1em;
+            background-color: #4a4a4a;
+            color: #ffffff;
+            transition: all 0.3s ease;
+        }
+        #user-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #ff00ff, 0 0 0 4px #00ffff;
+        }
+        #send-button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            color: #ffffff;
+            border: none;
+            border-radius: 30px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        #send-button:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+        #send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 40px;
+        }
+        .dot-flashing {
+            position: relative;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #ff00ff;
+            color: #ff00ff;
+            animation: dot-flashing 1s infinite linear alternate;
+            animation-delay: 0.5s;
+        }
+        .dot-flashing::before, .dot-flashing::after {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: 0;
+        }
+        .dot-flashing::before {
+            left: -15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #ff00ff;
+            color: #ff00ff;
+            animation: dot-flashing 1s infinite alternate;
+            animation-delay: 0s;
+        }
+        .dot-flashing::after {
+            left: 15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #ff00ff;
+            color: #ff00ff;
+            animation: dot-flashing 1s infinite alternate;
+            animation-delay: 1s;
+        }
+        @keyframes dot-flashing {
+            0% {
+                background-color: #ff00ff;
+            }
+            50%, 100% {
+                background-color: #00ffff;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1 class="logo">SONE AI</h1>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Ask SONE AI anything...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        let isProcessing = false;
+
+        function addMessage(content, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', isUser ? 'user-message' : 'bot-message');
+            
+            const messageContent = document.createElement('div');
+            messageContent.classList.add('message-content');
+            messageContent.textContent = content;
+            
+            messageDiv.appendChild(messageContent);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addLoadingIndicator() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.classList.add('loading');
+            loadingDiv.innerHTML = '<div class="dot-flashing"></div>';
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return loadingDiv;
+        }
+
+        function removeLoadingIndicator(loadingDiv) {
+            chatMessages.removeChild(loadingDiv);
+        }
+
+        function setInputState(disabled) {
+            userInput.disabled = disabled;
+            sendButton.disabled = disabled;
+            isProcessing = disabled;
+        }
+
+        async function callChatApi(message) {
+    const response = await fetch('/chat', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: message }),
+    });
+    const data = await response.json();
+    return data.response;
+}
+
+        async function handleUserInput() {
+            if (isProcessing) return;
+            
+            const message = userInput.value.trim();
+            if (message) {
+                setInputState(true);
+                addMessage(message, true);
+                userInput.value = '';
+
+                const loadingIndicator = addLoadingIndicator();
+
+                try {
+                    const response = await callChatApi(message);
+                    removeLoadingIndicator(loadingIndicator);
+                    addMessage(response, false);
+                } catch (error) {
+                    console.error('Error fetching response:', error);
+                    removeLoadingIndicator(loadingIndicator);
+                    addMessage('Sorry, there was an error processing your request.', false);
+                } finally {
+                    setInputState(false);
+                    userInput.focus();
+                }
+            }
+        }
+
+        sendButton.addEventListener('click', handleUserInput);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleUserInput();
+            }
+        });
+    </script>
+</body>
+</html>
