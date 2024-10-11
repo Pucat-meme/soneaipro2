@@ -5,12 +5,15 @@ import os
 
 app = Flask(__name__)
 CORS(app)
-
 client = Client()
 
-@app.route('/')
-def index():
-    return send_from_directory('static', 'index.html')
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(f"static/{path}"):
+        return send_from_directory('static', path)
+    else:
+        return send_from_directory('static', 'index.html')
 
 @app.route('/chat', methods=['POST'])
 def chat():
