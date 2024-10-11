@@ -245,9 +245,18 @@
         },
         body: JSON.stringify({ message: message }),
     });
-    const data = await response.json();
-    return data.response;
+
+    const responseBody = await response.text(); // Get the response as text
+    console.log('Response:', responseBody); // Log the response body for debugging
+
+    try {
+        return JSON.parse(responseBody); // Try to parse it as JSON
+    } catch (error) {
+        console.error('Invalid JSON:', error);
+        throw new Error('Invalid JSON response');
+    }
 }
+
 
         async function handleUserInput() {
             if (isProcessing) return;
