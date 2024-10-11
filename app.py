@@ -10,11 +10,11 @@ client = Client()
 
 @app.route('/')
 def index():
-    return send_from_directory('index.html')
+    return send_from_directory('static', 'index.html')
 
-@app.route('/<path:path>')
+@app.route('/static/<path:path>')
 def serve_static(path):
-    return send_from_directory(path)
+    return send_from_directory('static', path)
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -29,6 +29,6 @@ def chat():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    if not os.path.exists('index.html'):
+    if not os.path.exists('static'):
         os.makedirs('static')
     app.run(debug=True)
